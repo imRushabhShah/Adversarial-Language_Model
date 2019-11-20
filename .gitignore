@@ -1,0 +1,10 @@
+__pycache__/
+*.pkl
+*.pickle
+glove*.txt
+*.zip
+.ipynb_checkpoints/
+tempWorkspace.ipynb
+*.h5
+
+/save/model/.ipynb_checkpoints/
