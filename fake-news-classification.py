@@ -324,6 +324,8 @@ def attack(X,model,SAVE_MODEL_PATH = './save/model/'):
 	replace X with the last saved checkpoint number
 	model CNN or LSTM whichever used
 	'''
+	TEXT_DATA = 'data/fake_or_real_news.csv'
+	df = read_csv(TEXT_DATA=TEXT_DATA):
 	logFile = SAVE_MODEL_PATH+model.type+'_log.csv'
 	model.model.load_weights(SAVE_MODEL_PATH+model.type+'_model_'+X+'.h5') 
 	fake_texts = list(df['label'].apply(lambda x: x == 'FAKE'))
