@@ -1,14 +1,11 @@
-
 import nltk
 from nltk.corpus import wordnet
+import random
+from nltk.corpus import stopwords
 nltk.download('punkt')
 nltk.download('averaged_perceptron_tagger')
 nltk.download('wordnet')
-import random
-MAX_SEQUENCE_LENGTH = 5000
-
-
-
+nltk.download('stopwords')
 def get_tokens(sent):
     """
     return words tokens
@@ -16,14 +13,10 @@ def get_tokens(sent):
     return nltk.word_tokenize(sent)
     
 def get_synonymes(word):
-  
-  '''
-  using sysset from wordnet to get all possible synonyms
-  '''
-  
+  # using sysset from wordnet to get all possible synonyms  
   def get_word(word_with_type):
-    #get_synonymes('weak') -> returns all synonyms,all synonyms in dict with type of word
     """ 
+    #get_synonymes('weak') -> returns all synonyms,all synonyms in dict with type of word
     the function takes a string like "dog.n.01" and return dog,n so we know what
     type of word we have like is it verb for v adj for a and n for noun
     """
@@ -51,28 +44,52 @@ def get_synonymes(word):
     syn_dict[t].add(w)
   return sss,syn_dict
 
+
+def evaluate_ourfakes(model, Fake_texts):
+    '''
+    evaluate the model, both training and testing errors are reported
+    '''
+    missclasified_fakes = []
+    correct_clasified_fakes = []
+    def predict(X):
+        return np.rint(model.predict(X))
+    # training error
+    y_predict = predict(Fake_texts)
+    y = np.zeros(len(y_predict))
+    for i in range(len(y_predict)):
+        missclasified_fakes.append(Fake_texts[i]) if y_predict[i] == 1 else correct_clasified_fakes.append(Fake_texts[i])
+    acc = accuracy_score(y,y_predict) #model.evaluate(Fake_texts,y)
+    print("total missclassified fakes",len(missclasified_fakes),"total correctly classified fakes",len(correct_clasified_fakes))
+    return correct_clasified_fakes
+
 def predict_sentence(model,sent):
-    try_vector = tokenizer.texts_to_sequences([sent])
+    try_vector = model.tokenizer.texts_to_sequences([sent])
     try_vector = pad_sequences([try_vector[0]], 
                      maxlen=MAX_SEQUENCE_LENGTH, 
                      padding='pre', 
                      truncating='pre')
-    val = model.predict(try_vector)
+    val = model.model.predict(try_vector)
     return val
 
-def attack(model,dummy,pertub=1, printSwaps = False):    
+
+def attack(model,dummy,pertub=1, printSwaps = False): 
+    stopwords_list = set(stopwords.words('english'))   
     dummy_temp = nltk.word_tokenize(dummy[:MAX_SEQUENCE_LENGTH])
+    second_dummy = nltk.word_tokenize(dummy[:MAX_SEQUENCE_LENGTH])
+    success_index=[]
     done = False
-    unsuccessfullSwaps = 0
+    swaps = 0
     for i in range(int(len(dummy_temp)*pertub)):
         if done:
             break
         itter = 0
-        while itter<10000:
+        while itter<1000:
             itter+=1
             v = random.randint(0,len(dummy_temp)-1)
+            if dummy_temp[v] in stopwords_list or v in success_index:
+              continue
             syns,_ = get_synonymes(dummy_temp[v])
-            if len(syns)>0:
+            if len(syns)>0 :
                 break
         if itter == 10000:
             print("didnt catch any synonymes")
@@ -89,21 +106,16 @@ def attack(model,dummy,pertub=1, printSwaps = False):
             val = predict_sentence(model,sent)
             candidates[s] = val
             if val>=0.5:
-#                 print("got changes in ",i,val)
+                success_index.append(v)
                 done = True
                 break
-    #         best_candidate = max(candidates.iteritems(), key=operator.itemgetter(1))[0]
         best_candidate = max(candidates, key=candidates.get)
-        if word == best_candidate:
-            unsuccessfullSwaps+=1
-#             if printSwaps:
-#                 print("did not swap")
-#         else:
-#             if printSwaps:
-#                 print(word,best_candidate)
+        if not word == best_candidate:
+            success_index.append(v)
+            swaps+=1
         dummy_temp[v] = best_candidate
     if not done:
-#         print("sorry")
-        return 0
-    print("swaps done ",i+1-unsuccessfullSwaps,"total words",len(dummy_temp),"unsucessfull swaps try",unsuccessfullSwaps)
-    return i+1-unsuccessfullSwaps
+        return 0,None
+    for ind in success_index:
+        dummy_temp[ind] = '<attack>'+dummy_temp[ind]+'</attack><original>'+second_dummy[ind]+"</original>"
+    return swaps," ".join(dummy_temp)
