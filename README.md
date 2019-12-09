@@ -47,15 +47,15 @@ Average Sentence Len: 486.48
 ```
 from fake-news-classification import *
 
-#for CNN model
+# for CNN model
 cnn = run_CNN_model_creation()
 
-for LSTM_model
+# for LSTM_model
 lstm = run_LSTM_model_creation()
 ```
 ### Attack model
 ```
-replace X with last success epoc weight saved and model with cnn or lstm
+# replace X with last success epoc weight saved and model with cnn or lstm
 attack(X,model,SAVE_MODEL_PATH = './save/model/')
 
 ```
